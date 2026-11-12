@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090d18">
+  <title>Arcade Local — Portal de Jogos</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <header class="topbar">
+    <a class="brand" href="#" id="homeLink"><span class="brand-mark">A</span><span>ARCADE<span class="brand-accent"> LOCAL</span><small>SEU FLIPERAMA, EM CASA</small></span></a>
+    <nav><button class="nav-btn active" data-view="home">Início</button><button class="nav-btn" data-view="ranking">Ranking</button><button class="nav-btn" data-view="stats">Estatísticas</button><button class="nav-btn" data-view="settings">Configurações</button></nav>
+    <div class="top-status"><span class="status-dot"></span> OFFLINE READY</div>
+  </header>
+  <main>
+    <section id="homeView" class="view active">
+      <div class="hero">
+        <div class="hero-copy"><div class="eyebrow"><span></span> ARCADE COLLECTION · VOL. 01</div><h1>O próximo recorde<br>pode ser <em>seu.</em></h1>
+          <p>Oito clássicos. Uma única plataforma. Jogue direto no navegador e mantenha seus recordes salvos neste dispositivo.</p>
+          <button class="primary-btn" id="playFeatured">▶ &nbsp; JOGAR AGORA</button>
+        </div>
+        <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="pixel-tile tile-one">✦</div><div class="pixel-tile tile-two">▣</div><div class="pixel-tile tile-three">◆</div><div class="hero-core">ARCADE<span>08</span></div></div>
+      </div>
+      <div class="section-head"><div><div class="eyebrow">ESCOLHA SUA ARENA</div><h2>Biblioteca de jogos</h2></div><span class="muted" id="gameCount">08 JOGOS DISPONÍVEIS</span></div>
+      <div id="gameGrid" class="game-grid"></div>
+    </section>
+    <section id="gameView" class="view">
+      <div class="game-heading"><button class="back-btn" id="backHome">← Biblioteca</button><div><div class="eyebrow">ARCADE LOCAL / JOGANDO</div><h2 id="activeGameTitle">Jogo</h2></div><div class="game-best">RECORDE <strong id="activeBest">0</strong></div></div>
+      <div id="gameMount" class="game-mount"></div>
+    </section>
+    <section id="rankingView" class="view">
+      <div class="page-heading"><div class="eyebrow">HALL DA FAMA</div><h1>Ranking local</h1><p>Seus melhores resultados, organizados por jogo.</p></div>
+      <div class="panel"><div class="panel-title">MELHORES PONTUAÇÕES</div><div id="rankingList"></div></div>
+    </section>
+    <section id="statsView" class="view">
+      <div class="page-heading"><div class="eyebrow">SEU DESEMPENHO</div><h1>Estatísticas</h1><p>Acompanhe sua evolução no Arcade Local.</p></div>
+      <div id="statsGrid" class="stats-grid"></div><div class="panel"><div class="panel-title">ATIVIDADE POR JOGO</div><div id="activityList"></div></div>
+    </section>
+    <section id="settingsView" class="view">
+      <div class="page-heading"><div class="eyebrow">PREFERÊNCIAS</div><h1>Configurações</h1><p>Personalize sua experiência de jogo.</p></div>
+      <div class="panel settings-panel"><div class="setting-row"><div><strong>Tema da interface</strong><small>Alterne entre o tema escuro e claro.</small></div><select id="themeSelect"><option value="dark">Escuro</option><option value="light">Claro</option></select></div>
+      <div class="setting-row"><div><strong>Volume de efeitos</strong><small>Controle o volume dos sons do portal (quando disponíveis).</small></div><input id="volumeRange" type="range" min="0" max="100" value="50"><span id="volumeValue">50%</span></div>
+      <div class="setting-row danger-row"><div><strong>Apagar dados locais</strong><small>Remove recordes, estatísticas e preferências salvas.</small></div><button id="clearData" class="danger-btn">LIMPAR DADOS</button></div></div>
+      <p class="privacy-note">Seus dados ficam somente neste navegador, usando LocalStorage. Nenhuma conta ou servidor é necessário.</p>
+    </section>
+  </main>
+  <footer><span>ARCADE LOCAL © 2026</span><span>FEITO PARA JOGAR · 100% OFFLINE</span></footer>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="js/storage.js"></script><script src="js/games.js"></script><script src="js/app.js"></script>
+</body>
+</html>
