@@ -37,3 +37,4 @@ Arcade_Local/
 - O portal e os jogos funcionam localmente após a extração.
 - O progresso é local a cada navegador/dispositivo.
 - Todos os jogos têm os botões **Iniciar** e **Reiniciar**; ao sair de um jogo ele é encerrado por completo.
+- Novos jogos: Quebra-blocos, Space Invaders, Forca e Sudoku (12 no total) e visual renovado.

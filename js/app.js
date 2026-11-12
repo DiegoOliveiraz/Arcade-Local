@@ -12,5 +12,6 @@ function applyTheme(t){document.body.classList.toggle("light",t==="light")}
 document.querySelectorAll(".nav-btn").forEach(b=>b.onclick=()=>show(b.dataset.view));$("homeLink").onclick=e=>{e.preventDefault();show("home")};$("backHome").onclick=()=>show("home");$("playFeatured").onclick=()=>openGame("snake");
 $("themeSelect").onchange=e=>{store.saveSettings({theme:e.target.value});applyTheme(e.target.value)};$("volumeRange").oninput=e=>{$("volumeValue").textContent=e.target.value+"%";store.saveSettings({volume:+e.target.value})};
 $("clearData").onclick=()=>{if(confirm("Apagar todos os recordes, estatísticas e configurações?")){store.clear();store.reset();applyTheme("dark");renderCards();loadSettings();toast("Dados locais apagados.")}};
+$("gameCount").textContent=String(catalog.length).padStart(2,"0")+" JOGOS DISPONÍVEIS";
 const s=store.get().settings;applyTheme(s.theme||"dark");renderCards();
 })();
