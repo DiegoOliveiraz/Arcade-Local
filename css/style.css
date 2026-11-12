@@ -58,7 +58,7 @@ main{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:34px cla
 .game-toolbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .game-btn{border:1px solid var(--line);background:var(--panel);padding:11px 20px;border-radius:12px;cursor:pointer;font-weight:700;font-size:14px;transition:.18s}
 .game-btn:hover{border-color:var(--cyan);transform:translateY(-1px)}.game-btn:active{transform:scale(.97)}.game-btn.on{border-color:var(--cyan);color:var(--cyan)}
-.game-toolbar .game-btn:first-child{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 6px 20px #8b5cf655}
+.game-toolbar:not(.pick) .game-btn:first-child{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 6px 20px #8b5cf655}
 .game-canvas{max-width:100%;height:auto;border-radius:16px;border:1px solid #22d3ee55;box-shadow:0 0 0 4px #22d3ee0f,0 0 40px #22d3ee22;background:#0b1220;touch-action:none}
 .game-board{display:grid;gap:8px;justify-content:center}.game-board .game-btn{padding:0;font-weight:900}
 .cell{display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;background:#26354d;color:#fff;font-weight:800;cursor:pointer;padding:0;transition:.12s}button.cell:hover{filter:brightness(1.25)}
@@ -90,3 +90,4 @@ select{background:var(--bg2);border:1px solid var(--line);border-radius:10px;pad
 footer{position:relative;z-index:1;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:20px clamp(16px,4vw,48px);border-top:1px solid var(--line);color:var(--muted);font-size:10.5px;letter-spacing:2px}
 .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,30px);opacity:0;pointer-events:none;background:var(--bg2);border:1px solid var(--cyan);padding:12px 20px;border-radius:12px;z-index:50;transition:.3s;box-shadow:0 10px 30px #0008}.toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:820px){.hero{grid-template-columns:1fr}.hero-art{height:220px}.topbar{gap:10px}nav{order:3;width:100%;overflow-x:auto;flex-wrap:nowrap;margin:0}.top-status{margin-left:auto}.game-heading{flex-wrap:wrap}.rank-row{grid-template-columns:40px 1fr auto}.rank-date{display:none}}
+.pick .game-btn{padding:7px 14px;font-size:12.5px}

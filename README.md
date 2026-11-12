@@ -38,3 +38,4 @@ Arcade_Local/
 - O progresso é local a cada navegador/dispositivo.
 - Todos os jogos têm os botões **Iniciar** e **Reiniciar**; ao sair de um jogo ele é encerrado por completo.
 - Novos jogos: Quebra-blocos, Space Invaders, Forca e Sudoku (12 no total) e visual renovado.
+- Também: Xadrez e Damas contra a IA; Pong, Flappy, Quebra-blocos, Space Invaders, Forca, Sudoku, Xadrez e Damas têm níveis de dificuldade.
