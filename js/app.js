@@ -1,7 +1,7 @@
 (() => {
 const $=id=>document.getElementById(id),store=window.ArcadeStore,catalog=window.ArcadeGames.catalog;
 let active=null;
-function show(view){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(view+"View").classList.add("active");document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.view===view));if(view==="ranking")renderRanking();if(view==="stats")renderStats();if(view==="settings")loadSettings();window.scrollTo({top:0,behavior:"smooth"})}
+function show(view){if(view!=="game")window.ArcadeGames.stop();document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));$(view+"View").classList.add("active");document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.view===view));if(view==="ranking")renderRanking();if(view==="stats")renderStats();if(view==="settings")loadSettings();window.scrollTo({top:0,behavior:"smooth"})}
 function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),2400)}
 function renderCards(){const d=store.get(),grid=$("gameGrid");grid.innerHTML="";catalog.forEach(game=>{const card=document.createElement("article");card.className="game-card";card.style.setProperty("--game-color",game.color);card.style.setProperty("--tint",game.tint);card.innerHTML=`<div class="game-icon">${game.icon}</div><h3>${game.name}</h3><p>${game.desc}</p><div class="card-bottom"><span>RECORDE <strong>${d.scores[game.id]||0}</strong></span><span class="play-arrow">↗</span></div>`;card.onclick=()=>openGame(game.id);grid.append(card)})}
 function openGame(id){const game=catalog.find(g=>g.id===id);if(!game)return;active=id;$("activeGameTitle").textContent=game.name;$("activeBest").textContent=store.get().scores[id]||0;show("game");$("gameMount").innerHTML="";window.ArcadeGames.launch(id,$("gameMount"),(score,result,seconds)=>{const best=store.record(id,score,{result,seconds});$("activeBest").textContent=best;renderCards();toast("Resultado salvo neste dispositivo.")})}
@@ -12,5 +12,6 @@ function applyTheme(t){document.body.classList.toggle("light",t==="light")}
 document.querySelectorAll(".nav-btn").forEach(b=>b.onclick=()=>show(b.dataset.view));$("homeLink").onclick=e=>{e.preventDefault();show("home")};$("backHome").onclick=()=>show("home");$("playFeatured").onclick=()=>openGame("snake");
 $("themeSelect").onchange=e=>{store.saveSettings({theme:e.target.value});applyTheme(e.target.value)};$("volumeRange").oninput=e=>{$("volumeValue").textContent=e.target.value+"%";store.saveSettings({volume:+e.target.value})};
 $("clearData").onclick=()=>{if(confirm("Apagar todos os recordes, estatísticas e configurações?")){store.clear();store.reset();applyTheme("dark");renderCards();loadSettings();toast("Dados locais apagados.")}};
+$("gameCount").textContent=String(catalog.length).padStart(2,"0")+" JOGOS DISPONÍVEIS";document.querySelector(".hero-core span").textContent=catalog.length;
 const s=store.get().settings;applyTheme(s.theme||"dark");renderCards();
 })();
