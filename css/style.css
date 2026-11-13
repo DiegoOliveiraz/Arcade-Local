@@ -91,3 +91,16 @@ footer{position:relative;z-index:1;display:flex;justify-content:space-between;ga
 .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,30px);opacity:0;pointer-events:none;background:var(--bg2);border:1px solid var(--cyan);padding:12px 20px;border-radius:12px;z-index:50;transition:.3s;box-shadow:0 10px 30px #0008}.toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:820px){.hero{grid-template-columns:1fr}.hero-art{height:220px}.topbar{gap:10px}nav{order:3;width:100%;overflow-x:auto;flex-wrap:nowrap;margin:0}.top-status{margin-left:auto}.game-heading{flex-wrap:wrap}.rank-row{grid-template-columns:40px 1fr auto}.rank-date{display:none}}
 .pick .game-btn{padding:7px 14px;font-size:12.5px}
+
+/* ===== Novos jogos (lote 1+): palco, overlays de início/pausa/resultado ===== */
+.g2-stage{position:relative;margin:0 auto;border-radius:16px;overflow:hidden;line-height:0}
+.g2-stage .game-canvas{display:block;width:100%;height:auto}
+.g2-overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:18px;text-align:center;line-height:1.4;color:#e8eefc;background:rgba(7,11,22,.86);backdrop-filter:blur(6px);overflow:auto}
+.g2-overlay.show{display:flex}
+.g2-title{font-size:clamp(22px,6vw,32px);font-weight:900;letter-spacing:1px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.g2-sub{font-size:11px;letter-spacing:2.5px;color:#22d3ee;font-weight:700}
+.g2-instr{max-width:370px;color:#cbd5e1;font-size:13.5px}.g2-instr p{margin:0 0 7px}
+.g2-big{font-size:clamp(34px,10vw,48px);font-weight:900;font-variant-numeric:tabular-nums}
+.g2-line{color:#cbd5e1;font-size:14px}.g2-record{color:#fbbf24;font-weight:800;letter-spacing:1px;margin-bottom:4px}
+.g2-overlay .game-btn{color:#e8eefc}.g2-overlay .pick .game-btn.on{color:#22d3ee}
+.game-btn:disabled{opacity:.45;cursor:default;transform:none}
