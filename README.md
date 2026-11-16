@@ -1,6 +1,6 @@
 # Arcade Local
 
-Portal arcade offline com oito jogos, desenvolvido em HTML5, CSS3 e JavaScript Vanilla.
+Portal arcade offline com 22 jogos (14 clássicos + 8 novos com física real), desenvolvido em HTML5, CSS3 e JavaScript puro.
 
 ## Como executar
 1. Extraia `Arcade_Local.zip` para uma pasta.
@@ -17,6 +17,25 @@ Portal arcade offline com oito jogos, desenvolvido em HTML5, CSS3 e JavaScript V
 - **2048:** setas para mover, combinar peças e somar pontos.
 - **Campo Minado:** tabuleiro 10×10 com dez minas; clique para revelar e botão direito para marcar.
 
+## Novos jogos — Lote 1 (Futebol)
+Todos seguem o mesmo padrão: tela inicial com instruções e dificuldade, **Começar**, **Pausar/Continuar**, **Reiniciar**, pontuação, tela de resultado com **Jogar Novamente** e recorde individual (integrado ao Ranking e às Estatísticas). Funcionam com mouse, toque e teclado.
+- **Disputa de Pênaltis:** 5 cobranças contra o goleiro da IA, morte súbita em caso de empate. Mouse/toque: clique no ponto do gol, segure para carregar a força e solte. Teclado: setas + Espaço.
+- **Seja o Goleiro:** 12 chutes (posições, velocidades e efeitos diferentes), 3 vidas. Arraste para mover o goleiro; setas no teclado.
+- **Mira Certa:** acerte alvos no gol com vento lateral que desvia a bola.
+- **Desafio do Travessão:** 10 chutes, cada um de mais longe; acerte a barra.
+- **Física (js/physics.js):** gravidade, arrasto do ar, efeito Magnus (curva), quique com perda de energia, colisão real com traves e travessão, rede e vento. P pausa/continua em qualquer um deles.
+
+## Novos jogos — Lote 2
+- **Faltas:** 5 cobranças com barreira (que pula na dificuldade alta) e goleiro. A barra EFEITO (toque nela ou teclas Q/E) faz a bola curvar em volta da barreira.
+- **Drible Maluco:** corra com a bola (presa ao pé por uma mola, balança nas curvas) desviando de marcadores e carrinhos. O botão DRIBLE (ou Espaço) faz uma arrancada lateral com invencibilidade; passar rente a um defensor dá bônus e combo.
+- **Air Hockey:** primeiro a 7 gols contra a CPU. Colisões elásticas disco × taco e disco × borda; a batida ganha a velocidade do seu taco.
+- **Corrida Infinita:** pule (segure para pular mais alto), deslize sob barras suspensas e colete orbes; a velocidade cresce com o tempo.
+
+## Funcionamento offline (Service Worker)
+- O Service Worker (`sw.js`) e o manifesto (`manifest.webmanifest`) só funcionam quando o portal é servido por **http(s) ou localhost** (ex.: Vercel, GitHub Pages, `npx serve`). Abrir `index.html` direto do disco (`file://`) continua funcionando, mas sem instalação/cache do navegador.
+- Instalação no Android: abra o endereço no Chrome > menu > "Instalar app".
+- **A cada atualização de arquivos, aumente `CACHE_VERSION` em `sw.js`**, senão o navegador continua mostrando a versão antiga.
+
 ## Dados
 Recordes, partidas, resultados e configurações são armazenados exclusivamente no `LocalStorage` do navegador. Os dados permanecem no dispositivo e no perfil de navegador utilizado. Limpar os dados do navegador pode removê-los.
 
@@ -25,14 +44,23 @@ Recordes, partidas, resultados e configurações são armazenados exclusivamente
 Arcade_Local/
 ├── index.html
 ├── README.md
+├── sw.js
+├── manifest.webmanifest
 ├── css/style.css
 ├── js/app.js
-├── js/games.js
+├── js/games.js       (14 jogos originais)
+├── js/games2.js      (framework padrão + Lote 1)
+├── js/games3.js      (Lote 2)
+├── js/physics.js     (física da bola)
+├── js/pwa.js         (registro do Service Worker)
 ├── js/storage.js
-└── assets/
+└── assets/           (ícones)
 ```
 
 ## Observações
 - Sem frameworks, bibliotecas, fontes remotas ou backend.
 - O portal e os jogos funcionam localmente após a extração.
 - O progresso é local a cada navegador/dispositivo.
+- Todos os jogos têm os botões **Iniciar** e **Reiniciar**; ao sair de um jogo ele é encerrado por completo.
+- Novos jogos: Quebra-blocos, Space Invaders, Forca e Sudoku (12 no total) e visual renovado.
+- Também: Xadrez e Damas contra a IA; Pong, Flappy, Quebra-blocos, Space Invaders, Forca, Sudoku, Xadrez e Damas têm níveis de dificuldade.
