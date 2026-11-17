@@ -41,7 +41,7 @@ function arcade(cfg) {
     const hud = $("div", "game-hud");
     const hv = cfg.hud.map(([k, v]) => { const b = $("div", "hud-box"); b.append($("small", "", k)); const s = $("strong", "", v); b.append(s); hud.append(b); return s; });
     shell.append(hud);
-    const stage = $("div", "g2-stage"); stage.style.width = `min(100%,${cfg.W}px)`;
+    const stage = $("div", "g2-stage fit"); stage.style.setProperty("--w", cfg.W); stage.style.setProperty("--h", cfg.H);
     const canvas = $("canvas", "game-canvas"); canvas.width = cfg.W; canvas.height = cfg.H; canvas.style.width = "100%";
     const ov = $("div", "g2-overlay"); stage.append(canvas, ov); shell.append(stage);
     const msg = $("div", "game-message"); shell.append(msg);
@@ -51,7 +51,7 @@ function arcade(cfg) {
       hud: (i, v) => { hv[i].textContent = v; }, msg: t => { msg.textContent = t; },
       pos: e => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) * cfg.W / r.width, (e.clientY - r.top) * cfg.H / r.height]; },
       finish };
-    let G = null, secs = 0;
+    let G = null, secs = 0, overAt = 0;
 
     const showOv = () => { ov.innerHTML = ""; ov.classList.add("show"); return ov; };
     const hideOv = () => { ov.classList.remove("show"); ov.innerHTML = ""; };
@@ -85,7 +85,7 @@ function arcade(cfg) {
     function resume() { if (api.state !== "pause") return; api.state = "run"; hideOv(); sync(); }
     function finish(score, result, o = {}) {
       if (api.state !== "run") return;
-      api.state = "over"; score = Math.max(0, Math.floor(score));
+      api.state = "over"; overAt = performance.now(); score = Math.max(0, Math.floor(score));
       const prev = S.get().scores[cfg.id] || 0;
       end(score, result, secs); // grava recorde, partidas, vitórias e tempo (ranking/estatísticas)
       const best = Math.max(prev, score), box = showOv();
@@ -104,6 +104,10 @@ function arcade(cfg) {
     on(canvas, "pointerdown", ptr("down")); on(canvas, "pointermove", ptr("move")); on(canvas, "pointerup", ptr("up")); on(canvas, "pointercancel", ptr("up"));
     const key = down => e => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === " " && api.state !== "run") { // Espaço: começar / continuar / jogar novamente
+        if (down && !e.repeat && performance.now() - overAt > 700) { api.state === "pause" ? resume() : begin(); }
+        e.preventDefault(); return;
+      }
       if (down && (e.key === "p" || e.key === "P" || e.key === "Escape")) { api.state === "pause" ? resume() : pause(); return; }
       if (api.state === "run" && G.key?.(e, down)) e.preventDefault();
     };
@@ -183,14 +187,53 @@ function drawBall(x, c, b, trail, minR = 3.2) {
   x.fillStyle = "#1e293b"; const a0 = b.t * 9 + b.x; for (let i = 0; i < 3; i++) { const a = a0 + i * 2.1; x.beginPath(); x.arc(p[0] + Math.cos(a) * r * .5, p[1] + Math.sin(a) * r * .5, r * .22, 0, 7); x.fill(); }
 }
 
+/* ───────── goleiro com física real: gravidade, salto, mergulho, queda e levantar ───────── */
+const KG = 9.81, K_LEAN = 1.32;
+function newKeeper() { return { x: 0, y: .95, vx: 0, vy: 0, lean: 0, dir: 1, side: false, st: "stand", t: 0, tx: 0, ty: .95, go: false, wait: 0, dived: false, walk: false, T: .4 }; }
+function keeperReset(k) { Object.assign(k, { x: 0, y: .95, vx: 0, vy: 0, lean: 0, side: false, st: "stand", t: 0, tx: 0, ty: .95, go: false, wait: 0, dived: false, walk: false, T: .4 }); }
+// Impulso de saída: sem controle no ar, a gravidade decide o resto. x(T)=tx e y(T)=ty (se a velocidade permitir).
+function keeperDive(k, tx, ty, vmax, T = .4) {
+  if (k.st !== "stand") return false;
+  const dx = tx - k.x, far = Math.abs(dx) > 1.1, high = ty > 1.3;
+  if (!far && !high) return false;
+  k.vx = clamp(dx / (T * 1.08), far ? -vmax : -2, far ? vmax : 2);
+  k.vy = clamp((ty - .95) / T + .5 * KG * T, 1.4, 4.8);
+  k.dir = Math.sign(dx) || k.dir; k.side = far; k.dT = T; k.st = "air"; k.t = 0; return true;
+}
+function keeperStep(k, dt, walkTx, walkV) {
+  const e = Math.min(1, dt * 9);
+  if (k.st === "stand") {
+    if (walkTx != null) { const m = walkV * dt; k.x += clamp(walkTx - k.x, -m, m); }
+    k.y = .95; k.vx = k.vy = 0; k.lean += ((walkTx != null ? clamp((walkTx - k.x) * .12, -.15, .15) : 0) - k.lean) * e;
+  } else if (k.st === "air") { // no ar: só a gravidade age
+    k.t += dt; k.vy -= KG * dt; if (k.t > k.dT) k.vx *= Math.exp(-9 * dt); k.x += k.vx * dt; k.y += k.vy * dt;
+    k.lean += ((k.side ? k.dir * K_LEAN : 0) - k.lean) * e;
+    const floor = .95 - .65 * Math.min(1, Math.abs(k.lean) / K_LEAN);
+    if (k.vy < 0 && k.y <= floor) { k.y = floor; k.vy = 0; k.st = k.side ? "down" : "land"; k.t = 0; }
+  } else if (k.st === "down") { // caiu no chão e escorrega
+    k.t += dt; k.vx *= Math.exp(-2.4 * dt); k.x += k.vx * dt; k.y = .3; if (k.t > .7) { k.st = "up"; k.t = 0; }
+  } else if (k.st === "land") { // aterrissagem do salto vertical
+    k.t += dt; k.vx *= Math.exp(-8 * dt); k.x += k.vx * dt; k.y = .95; k.lean *= Math.exp(-8 * dt); if (k.t > .22) { k.st = "stand"; k.t = 0; }
+  } else if (k.st === "up") { // levantando
+    k.t += dt; const u = Math.min(1, k.t / .3); k.y = .3 + .65 * u; k.lean = k.dir * K_LEAN * (1 - u); if (u >= 1) { k.st = "stand"; k.lean = 0; }
+  }
+  k.x = clamp(k.x, -3.75, 3.75);
+}
+// Alcance do goleiro: em pé, braços para cima; deitado, braços esticados para o lado.
+function keeperHit(k, b) {
+  const s = Math.min(1, Math.abs(k.lean) / K_LEAN), ax = .85 + .45 * s, ay = 1 - .58 * s;
+  return ((b.x - k.x) / (ax + P.R)) ** 2 + ((b.y - k.y) / (ay + P.R)) ** 2 <= 1;
+}
+
 function drawKeeper(x, c, kx, ky, lean, zg, col = "#fbbf24") {
-  const p = proj(c, kx, ky, zg); if (!p) return; const s = p[2];
+  const p = proj(c, kx, ky, zg); if (!p) return; const s = p[2], g = proj(c, kx, 0, zg);
+  if (g) { x.fillStyle = "rgba(0,0,0,.28)"; x.beginPath(); x.ellipse(g[0], g[1], s * (.35 + .55 * Math.min(1, Math.abs(lean) / K_LEAN)), s * .1, 0, 0, 7); x.fill(); } // sombra no chão
   x.save(); x.translate(p[0], p[1]); x.rotate(lean);
-  x.fillStyle = "#111827"; rr(x, -.2 * s, .12 * s, .4 * s, .5 * s, .08 * s); x.fill();                  // pernas
-  x.fillStyle = col; rr(x, -.27 * s, -.5 * s, .54 * s, .72 * s, .12 * s); x.fill();                      // tronco
+  x.fillStyle = "#111827"; rr(x, -.2 * s, .1 * s, .4 * s, .85 * s, .08 * s); x.fill();                  // pernas (pés no chão quando em pé)
+  x.fillStyle = col; rr(x, -.27 * s, -.55 * s, .54 * s, .75 * s, .12 * s); x.fill();                     // tronco
   x.strokeStyle = col; x.lineWidth = .15 * s; x.lineCap = "round";
-  const up = Math.abs(lean) > .2 ? -.85 : -.45; x.beginPath(); x.moveTo(-.27 * s, -.35 * s); x.lineTo(-.72 * s, up * s); x.moveTo(.27 * s, -.35 * s); x.lineTo(.72 * s, up * s); x.stroke();
-  x.fillStyle = "#fde68a"; x.beginPath(); x.arc(0, -.68 * s, .15 * s, 0, 7); x.fill();                    // cabeça
+  const up = (Math.abs(lean) > .2 || ky > 1.1) ? -.95 : -.4; x.beginPath(); x.moveTo(-.27 * s, -.4 * s); x.lineTo(-.72 * s, up * s); x.moveTo(.27 * s, -.4 * s); x.lineTo(.72 * s, up * s); x.stroke();
+  x.fillStyle = "#fde68a"; x.beginPath(); x.arc(0, -.76 * s, .16 * s, 0, 7); x.fill();                    // cabeça
   x.fillStyle = "#f8fafc"; x.beginPath(); x.arc(-.72 * s, up * s, .09 * s, 0, 7); x.arc(.72 * s, up * s, .09 * s, 0, 7); x.fill(); // luvas
   x.restore();
 }
@@ -315,23 +358,23 @@ const penalty = arcade({
     "Quanto mais força, mais rápida a bola — e menos precisa. Cantos e ângulos valem pontos extras; sequência de gols também."],
   create(api) {
     const D = api.D; let u = 0, c = 0, n = 0, score = 0, streak = 0, uh = [], ch = [], sudden = false;
-    const K = { x: 0, y: .95, tx: 0, ty: .95, go: false, wait: 0, lean: 0 };
+    const K = newKeeper();
     const hudAll = () => { api.hud(0, u + " x " + c); api.hud(1, sudden ? "MS" : Math.min(n + 1, 5) + "/5"); api.hud(2, score); };
     const core = shotCore(api, {
       delay: 1.2,
       onShoot(sh) {
-        K.go = true; K.wait = D.rd;
+        K.go = true; K.wait = D.rd; K.dived = false; K.walk = false; K.T = clamp(sh.arr.t - D.rd - .04, .28, .7);
         if (Math.random() < D.pRead) { K.tx = sh.arr.x + gauss() * D.err; K.ty = sh.arr.y + gauss() * D.err * .6; }
         else { K.tx = (Math.random() < .5 ? -1 : 1) * rnd(.8, 3.2); K.ty = rnd(.6, 1.9); }
         K.tx = clamp(K.tx, -3.5, 3.5); K.ty = clamp(K.ty, .8, 1.7);
       },
       tick(dt) {
-        if (!K.go) return; K.wait -= dt; if (K.wait > 0) return;
-        const m = D.kv * dt; K.x += clamp(K.tx - K.x, -m, m); K.y += clamp(K.ty - K.y, -m * .6, m * .6); K.lean = clamp(K.x / 3, -1, 1) * 1.15;
+        if (K.go) { K.wait -= dt; if (K.wait <= 0 && !K.dived) { K.dived = true; if (!keeperDive(K, K.tx, K.ty, D.kv * 1.3, K.T)) K.walk = true; } }
+        keeperStep(K, dt, K.go && K.walk ? K.tx : null, D.kv * .55);
       },
       sub(b, h, st) { // defesa: bola dentro da "área de alcance" do goleiro ao chegar na linha
         if (b.chk || b.z < st.zg - .4) return; b.chk = true;
-        if (b.vz > 0 && ((b.x - K.x) / (.85 + P.R)) ** 2 + ((b.y - K.y) / (1 + P.R)) ** 2 <= 1) {
+        if (b.vz > 0 && keeperHit(K, b)) {
           b.dead = true; b.vz = -Math.abs(b.vz) * .25; b.vx = (b.x - K.x) * 3 + rnd(-2, 2); b.vy = rnd(1, 4); b.ev.push("save");
         }
       },
@@ -355,7 +398,7 @@ const penalty = arcade({
           core.S.tm = 1.6; core.S.fin = () => api.finish(total, res, { title: res === "win" ? "VITÓRIA!" : res === "draw" ? "EMPATE" : "DERROTA", lines: [`Placar final: ${u} x ${c}`, res === "win" ? "Bônus de vitória: +200" : res === "draw" ? "Bônus de empate: +60" : "Sem bônus de vitória"] });
         }
       },
-      next() { if (core.S.fin) { core.S.fin(); return; } K.x = 0; K.y = .95; K.go = false; K.lean = 0; core.newShot(11); hudAll(); }
+      next() { if (core.S.fin) { core.S.fin(); return; } keeperReset(K); core.newShot(11); hudAll(); }
     });
     const pips = (x, label, arr, px, py) => {
       x.font = "700 10px sans-serif"; x.fillStyle = "#cbd5e1"; x.textAlign = "left"; x.fillText(label, px, py - 8);
@@ -376,11 +419,11 @@ const goalie = arcade({
   hud: [["DEFESAS", "0"], ["VIDAS", "❤❤❤"], ["PONTOS", "0"]],
   diffs: { "Fácil": { kv: 11, sp: .85, curve: .3, hint: 1 }, "Normal": { kv: 9, sp: 1, curve: .6, hint: 0 }, "Difícil": { kv: 8, sp: 1.15, curve: 1, hint: 0 } },
   instr: ["Defenda 12 chutes de atacantes em posições e velocidades diferentes. Você perde uma vida a cada gol; com 3 gols sofridos, acabou.",
-    "Mouse/toque: arraste para mover o goleiro (ele salta até o ponto). Teclado: setas.",
+    "Mouse/toque: arraste para andar de lado. Depois do chute, aponte o canto: o goleiro mergulha ou pula (e fica no chão um instante). Teclado: setas.",
     "Observe o batedor e antecipe o canto. Os chutes ficam mais fortes e alguns fazem curva. Defesas difíceis (cantos) valem bônus."],
   create(api) {
     const D = api.D, x = api.ctx, W = api.W, H = api.H, cam = makeCam(GZ, "goalie"), keys = {};
-    const K = { x: 0, y: .95, tx: 0, ty: .95, lean: 0 };
+    const K = newKeeper();
     let tm0 = 1, ph = "idle", round = 0, lives = 3, saves = 0, score = 0, ball = null, shot = null, wind = 0, tm = 0, endT = null, trail = [], pops = [], t = 0;
     const pop = (text, col) => pops.push({ t: 0, text, col });
     const hudAll = () => { api.hud(0, saves); api.hud(1, "❤".repeat(Math.max(0, lives)) || "—"); api.hud(2, score); };
@@ -400,13 +443,14 @@ const goalie = arcade({
       }
     }
     return {
-      start() { round = 0; lives = 3; saves = 0; score = 0; K.x = 0; K.y = .95; K.tx = 0; K.ty = .95; pops = []; hudAll(); newShot(); },
+      start() { round = 0; lives = 3; saves = 0; score = 0; keeperReset(K); pops = []; hudAll(); newShot(); },
       ptr(type, px, py) { if (type === "down" || type === "move") aimTo(px, py); },
       key(e, down) { if (e.key.startsWith("Arrow")) { keys[e.key] = down; return true; } return false; },
       update(dt) {
         t += dt; pops.forEach(p => { p.t += dt; }); pops = pops.filter(p => p.t < 1.5);
         K.tx = clamp(K.tx + ((keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)) * 7 * dt, -3.4, 3.4); K.ty = clamp(K.ty + ((keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0)) * 5 * dt, .6, 1.8);
-        const m = D.kv * dt, ox = K.x; K.x += clamp(K.tx - K.x, -m, m); K.y += clamp(K.ty - K.y, -m * .6, m * .6); K.lean = clamp(-(K.tx - K.x) / 2, -.5, .5) * 1.6 + (K.x - ox) / Math.max(dt, 1e-3) / 40;
+        if (ph === "fly") keeperDive(K, K.tx, K.ty, D.kv, .4); // só mergulha/pula depois do chute; antes, anda de lado
+        keeperStep(K, dt, K.tx, 4.6);
         if (ph === "wait") { tm -= dt; if (tm <= 0) { ball = P.ball(shot.x0, P.R, 0, shot.v.vx, shot.v.vy, shot.v.vz, 0, shot.wy); ph = "fly"; api.sfx(150, .14, "triangle", .35, -90); api.msg(""); } }
         else if (ph === "fly") {
           const env = { zg: GZ }, n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
@@ -414,7 +458,7 @@ const goalie = arcade({
             P.step(ball, h, env);
             if (!ball.chk && ball.z >= GZ - .4) { // ponto de defesa
               ball.chk = true;
-              if (ball.vz > 0 && ((ball.x - K.x) / (.85 + P.R)) ** 2 + ((ball.y - K.y) / (1 + P.R)) ** 2 <= 1) {
+              if (ball.vz > 0 && keeperHit(K, ball)) {
                 ball.dead = true; ball.vz = -Math.abs(ball.vz) * .25; ball.vx = (ball.x - K.x) * 3 + rnd(-2, 2); ball.vy = rnd(1, 4); ball.ev.push("save");
                 saves++; const hard = Math.abs(shot.tg.x) * 14 + Math.abs(shot.tg.y - 1) * 18 + Math.abs(shot.v.vz) * .8, add = 100 + Math.round(hard); score += add; hudAll(); pop("DEFENDEU! +" + add, "#38bdf8");
               }
@@ -518,7 +562,7 @@ const travessao = arcade({
   }
 });
 
-window.ArcadeKit = { arcade, shotCore, drawKeeper, drawPlayer, drawField, drawGoal, drawBall, makeCam, proj, unproj, sfx, sfxGoal, clamp, rnd, gauss, rr, fmt, on };
+window.ArcadeKit = { arcade, shotCore, drawKeeper, newKeeper, keeperReset, keeperDive, keeperStep, keeperHit, drawPlayer, drawField, drawGoal, drawBall, makeCam, proj, unproj, sfx, sfxGoal, clamp, rnd, gauss, rr, fmt, on };
 
 /* ───────── integração com o portal ───────── */
 const NEW = [

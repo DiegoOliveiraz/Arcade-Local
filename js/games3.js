@@ -3,7 +3,7 @@
 (() => {
 const K = window.ArcadeKit, A = window.ArcadeGames, P = window.ArcadePhysics;
 if (!K || !A || !P) return;
-const { arcade, shotCore, drawKeeper, drawPlayer, sfx, sfxGoal, clamp, rnd, rr } = K;
+const { arcade, shotCore, drawKeeper, newKeeper, keeperReset, keeperDive, keeperStep, keeperHit, drawPlayer, sfx, sfxGoal, clamp, rnd, rr } = K;
 const PI = Math.PI;
 const pop = (x, p, big) => { x.save(); const k = p.t / 1.1; x.globalAlpha = Math.max(0, 1 - k * k); x.font = (big ? "900 30px" : "800 18px") + " sans-serif"; x.textAlign = "center"; x.lineWidth = 5; x.strokeStyle = "rgba(0,0,0,.65)"; x.strokeText(p.text, p.x, p.y - k * 40); x.fillStyle = p.col; x.fillText(p.text, p.x, p.y - k * 40); x.restore(); };
 
@@ -18,25 +18,25 @@ const freekick = arcade({
   create(api) {
     const D = api.D, SPOTS = [[-7, 18], [6, 20], [0, 22], [11, 24], [-12, 26]], WZ = 9.15;
     let i = 0, goals = 0, score = 0;
-    const KP = { x: 0, y: .95, tx: 0, ty: .95, go: false, wait: 0, lean: 0 }, wall = { x: 0, jump: false, jt: 0, lift: 0 };
+    const KP = newKeeper(), wall = { x: 0, jump: false, jt: 0, lift: 0 };
     const hudAll = () => { api.hud(0, goals); api.hud(1, Math.min(i + 1, 5) + "/5"); api.hud(2, score); };
     const nextSpot = () => {
-      const [x0, zg] = SPOTS[Math.min(i, 4)]; Object.assign(KP, { x: 0, y: .95, go: false, lean: 0 });
+      const [x0, zg] = SPOTS[Math.min(i, 4)]; keeperReset(KP);
       wall.x = x0 * (1 - WZ / zg); wall.jump = false; wall.jt = 0; wall.lift = 0; core.newShot(zg, null, x0);
       api.msg("Mire, ajuste o EFEITO (barra) e contorne a barreira."); hudAll();
     };
     const core = shotCore(api, {
       spinBar: true, delay: 1.2,
       onShoot(sh) {
-        wall.jump = Math.random() < D.pj; wall.jt = 0; KP.go = true; KP.wait = D.rd;
+        wall.jump = Math.random() < D.pj; wall.jt = 0; KP.go = true; KP.wait = D.rd; KP.dived = false; KP.walk = false; KP.T = clamp(sh.arr.t - D.rd - .04, .28, .7);
         if (Math.random() < D.pRead) { KP.tx = sh.arr.x + K.gauss() * D.err; KP.ty = sh.arr.y + K.gauss() * D.err * .6; }
         else { KP.tx = (Math.random() < .5 ? -1 : 1) * rnd(.8, 3.2); KP.ty = rnd(.6, 1.9); }
         KP.tx = clamp(KP.tx, -3.5, 3.5); KP.ty = clamp(KP.ty, .8, 1.7);
       },
       tick(dt) {
-        if (wall.jump) { wall.jt += dt; wall.lift = wall.jt < .6 ? .55 * Math.sin(PI * wall.jt / .6) : 0; }
-        if (!KP.go) return; KP.wait -= dt; if (KP.wait > 0) return;
-        const m = D.kv * dt; KP.x += clamp(KP.tx - KP.x, -m, m); KP.y += clamp(KP.ty - KP.y, -m * .6, m * .6); KP.lean = clamp(KP.x / 3, -1, 1) * 1.15;
+        if (wall.jump) { wall.jt += dt; const u = wall.jt / .67; wall.lift = u < 1 ? .55 * 4 * u * (1 - u) : 0; } // salto da barreira: parábola (gravidade)
+        if (KP.go) { KP.wait -= dt; if (KP.wait <= 0 && !KP.dived) { KP.dived = true; if (!keeperDive(KP, KP.tx, KP.ty, D.kv * 1.3, KP.T)) KP.walk = true; } }
+        keeperStep(KP, dt, KP.go && KP.walk ? KP.tx : null, D.kv * .55);
       },
       sub(b, h, st) {
         if (!b.cw && b.z >= WZ) { // barreira
@@ -46,7 +46,7 @@ const freekick = arcade({
           }
         }
         if (b.chk || b.z < st.zg - .4) return; b.chk = true; // goleiro
-        if (b.vz > 0 && ((b.x - KP.x) / (.85 + P.R)) ** 2 + ((b.y - KP.y) / (1 + P.R)) ** 2 <= 1) {
+        if (b.vz > 0 && keeperHit(KP, b)) {
           b.dead = true; b.vz = -Math.abs(b.vz) * .25; b.vx = (b.x - KP.x) * 3 + rnd(-2, 2); b.vy = rnd(1, 4); b.ev.push("save");
         }
       },
@@ -163,7 +163,7 @@ const dribble = arcade({
 const hockey = arcade({
   id: "airhockey", title: "Air Hockey", W: 480, H: 640, def: "Normal",
   hud: [["VOCÊ", "0"], ["CPU", "0"], ["META", "7"]],
-  diffs: { "Fácil": { cap: 320, err: 34, pr: .3 }, "Normal": { cap: 560, err: 16, pr: .75 }, "Difícil": { cap: 820, err: 5, pr: 1 } },
+  diffs: { "Fácil": { cap: 250, err: 62, pr: .15, react: .32, hitMax: 400 }, "Normal": { cap: 400, err: 34, pr: .45, react: .22, hitMax: 620 }, "Difícil": { cap: 600, err: 18, pr: .8, react: .14, hitMax: 900 } },
   instr: ["Primeiro a 7 gols vence. Empurre o disco para o gol da CPU (em cima) e defenda o seu (embaixo).",
     "Mouse/toque: arraste o seu taco (roxo) pela metade de baixo da mesa. Teclado: setas.",
     "O disco quica nas bordas e ganha a velocidade do seu taco: uma batida rápida é um chute forte. Pontos: 100 por gol + bônus de vitória e de saldo."],
@@ -181,7 +181,7 @@ const hockey = arcade({
       const dx = puck.x - m.x, dy = puck.y - m.y, d = Math.hypot(dx, dy), mn = PR + MR; if (d >= mn || d === 0) return;
       const nx = dx / d, ny = dy / d; puck.x = m.x + nx * mn; puck.y = m.y + ny * mn;
       const vn = (puck.vx - m.vx) * nx + (puck.vy - m.vy) * ny;
-      if (vn < 0) { puck.vx -= 1.9 * vn * nx; puck.vy -= 1.9 * vn * ny; if (tHit <= 0 && -vn > 60) { sfx(260 + Math.min(500, -vn * .4), .06, "square", .12); tHit = .05; } }
+      if (vn < 0) { puck.vx -= 1.9 * vn * nx; puck.vy -= 1.9 * vn * ny; if (m === cm) { const sp = Math.hypot(puck.vx, puck.vy); if (sp > D.hitMax) { puck.vx *= D.hitMax / sp; puck.vy *= D.hitMax / sp; } } if (tHit <= 0 && -vn > 60) { sfx(260 + Math.min(500, -vn * .4), .06, "square", .12); tHit = .05; } }
     };
     const goal = byPlayer => {
       if (byPlayer) ps++; else cs++; hudAll(); sfx(byPlayer ? 660 : 160, .35, byPlayer ? "triangle" : "sawtooth", .25, byPlayer ? 300 : -60);
@@ -201,7 +201,7 @@ const hockey = arcade({
         tx = clamp(tx + ((keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0)) * 520 * dt, L + MR, R - MR); ty = clamp(ty + ((keys.ArrowDown ? 1 : 0) - (keys.ArrowUp ? 1 : 0)) * 520 * dt, 330, B - MR);
         aiT -= dt; // decisão da CPU a cada ~0.12 s
         if (aiT <= 0) {
-          aiT = .12; const inHalf = puck.y < 330 && puck.vy > -100;
+          aiT = D.react; const inHalf = puck.y < 330 && puck.vy > -100;
           if (inHalf) {
             let dx = 240 + rnd(-60, 60) - puck.x, dy = B - puck.y; const d = Math.hypot(dx, dy); dx /= d; dy /= d;
             const behind = cm.y < puck.y - 25 && Math.abs(cm.x - puck.x) < 40;

@@ -24,24 +24,35 @@ const every=(fn,ms)=>{const id=setInterval(fn,ms);disposers.push(()=>clearInterv
 const loop=fn=>{let id;const step=t=>{fn(t);id=requestAnimationFrame(step)};id=requestAnimationFrame(step);disposers.push(()=>cancelAnimationFrame(id))};
 function setup(root,id,onEnd){
  stopAll();root.innerHTML="";const shell=$("div","game-shell");root.append(shell);
- let ended=false,t0=Date.now();
- const finish=(score,result="win")=>{if(ended)return;ended=true;onEnd(Math.max(0,Math.floor(score)),result,Math.floor((Date.now()-t0)/1000))};
+ let ended=false,t0=Date.now(),started=false,endAt=0;
+ const finish=(score,result="win")=>{if(ended)return;ended=true;started=false;endAt=performance.now();onEnd(Math.max(0,Math.floor(score)),result,Math.floor((Date.now()-t0)/1000))};
  const rearm=()=>{ended=false;t0=Date.now()};
  const hud=(items)=>{const h=$("div","game-hud");items.forEach(([k,v])=>{const b=$("div","hud-box");b.append($("small","",k));b.append($("strong","",v));h.append(b)});shell.append(h);return items.map((_,i)=>h.children[i].lastChild)};
  const msg=$("div","game-message");shell.append(msg);
  const controls=$("div","game-toolbar");shell.append(controls);
+ controls.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("button");if(!b)return;const t=b.textContent;if(t.includes("Reiniciar"))started=false;else if(t.includes("Iniciar"))started=true});
+ listen(document,"keydown",e=>{ // Espaço: aperta o botão "Iniciar" quando o jogo ainda não começou
+  if(e.key!==" "||e.repeat||e.ctrlKey||e.metaKey||e.altKey||started||performance.now()-endAt<700)return;
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test((e.target&&e.target.tagName)||""))return;
+  const b=[...controls.querySelectorAll("button")].find(x=>x.textContent.includes("Iniciar")&&!x.textContent.includes("Reiniciar"));
+  if(!b||b.disabled)return;
+  e.preventDefault();e.stopImmediatePropagation();if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();b.click()});
  return {shell,finish,rearm,hud,msg,controls};
 }
 const loopDt=fn=>{let p=0;loop(t=>{const d=p?Math.min((t-p)/16.667,2):1;p=t;fn(d)})};
 const picker=(g,opts,def)=>{let cur=def;const row=$("div","game-toolbar pick");g.shell.insertBefore(row,g.msg);const bs=Object.keys(opts).map(k=>{const b=button(k,()=>{cur=k;paint()});row.append(b);return b});const paint=()=>bs.forEach(b=>b.classList.toggle("on",b.textContent===cur));paint();return ()=>opts[cur]};
-function canvasGame(shell,w,h){const c=$("canvas","game-canvas");c.width=w;c.height=h;c.style.width=`min(100%,${w}px)`;shell.append(c);return [c,c.getContext("2d")]}
+function canvasGame(shell,w,h){const c=$("canvas","game-canvas fit");c.width=w;c.height=h;c.style.setProperty("--w",w);c.style.setProperty("--h",h);shell.append(c);return [c,c.getContext("2d")]}
 function snake(root,end){
  const g=setup(root,"snake",end),[scoreEl,sizeEl]=g.hud([["PONTOS","0"],["TAMANHO","3"]]);
- const [c,x]=canvasGame(g.shell,400,400),n=20,cell=20,STEP=105;let body,dir,q,food,score,run=false,over=false,last=0,prev=null;
+ const [c,x]=canvasGame(g.shell,400,400),n=20,cell=20,STEP=105;let body,dir,q,food,score,run=false,over=false,last=0,prev=null,vis=null,lastDraw=0;const MINGAP=38;
  const place=()=>{do{food={x:Math.floor(Math.random()*n),y:Math.floor(Math.random()*n)}}while(body.some(p=>p.x===food.x&&p.y===food.y))};
  const rr=(a,b,w,h,r)=>{x.beginPath();x.roundRect(a,b,w,h,r);x.fill()};
  const draw=(t=performance.now())=>{
-  const f=run&&!over&&prev?Math.min(1,Math.max(0,(t-last)/STEP)):1;
+  // posição visual: cada segmento persegue a sua casa lógica (acelera quando está longe) => curva sem pulo e sem atraso
+  const dtv=Math.min(64,Math.max(0,t-lastDraw));lastDraw=t;
+  if(!vis||!prev)vis=body.map(p=>({x:p.x,y:p.y}));
+  else{while(vis.length<body.length)vis.push({x:vis[vis.length-1].x,y:vis[vis.length-1].y});vis.length=body.length;
+   vis.forEach((v,i)=>{const dx=body[i].x-v.x,dy=body[i].y-v.y,d=Math.hypot(dx,dy);if(d<1e-4)return;if(d>2.5){v.x=body[i].x;v.y=body[i].y;return}const st=Math.min(d,(1+.9*Math.min(d,1.5))/STEP*dtv);v.x+=dx/d*st;v.y+=dy/d*st})}
   x.fillStyle="#0b1220";x.fillRect(0,0,400,400);for(let i=0;i<n;i++)for(let j=0;j<n;j++)if((i+j)%2===0){x.fillStyle="#ffffff08";x.fillRect(i*cell,j*cell,cell,cell)}
   // maçã: duas bochechas, brilho, cabinho e folha, "respirando"
   x.save();x.translate(food.x*cell+10,food.y*cell+11);const bob=1+Math.sin(t/260)*.07;x.scale(bob,bob);
@@ -50,7 +61,7 @@ function snake(root,end){
   x.strokeStyle="#7c4a1e";x.lineWidth=1.6;x.beginPath();x.moveTo(0,-5);x.quadraticCurveTo(1,-9,3,-10);x.stroke();
   x.fillStyle="#4ade80";x.beginPath();x.ellipse(5.5,-8,4,2,-.5,0,7);x.fill();x.restore();
   // corpo: posições interpoladas entre os quadrados => movimento suave
-  const pts=body.map((p,i)=>{const a=prev?(prev[i]||prev[prev.length-1]):p;return{x:(a.x+(p.x-a.x)*f)*cell+10,y:(a.y+(p.y-a.y)*f)*cell+10}});
+  const pts=vis.map(p=>({x:p.x*cell+10,y:p.y*cell+10}));
   const L=pts.length,wd=i=>7+10*Math.min(1,(L-i)/6); // afina na cauda
   x.lineCap="round";x.lineJoin="round";
   for(let i=L-1;i>=1;i--){x.strokeStyle="#064e3b";x.lineWidth=wd(i)+3;x.beginPath();x.moveTo(pts[i].x,pts[i].y);x.lineTo(pts[i-1].x,pts[i-1].y);x.stroke()}
@@ -69,11 +80,11 @@ function snake(root,end){
    if(over){x.strokeStyle="#111827";x.lineWidth=1.6;x.beginPath();x.moveTo(3,ey-2.4);x.lineTo(8,ey+2.4);x.moveTo(8,ey-2.4);x.lineTo(3,ey+2.4);x.stroke()}
    else{x.fillStyle="#fef08a";x.beginPath();x.arc(5.5,ey,3.4,0,7);x.fill();x.fillStyle="#111827";x.beginPath();x.ellipse(6.2,ey,1,2.5,0,0,7);x.fill()}});
   x.restore()};
- const reset=()=>{body=[{x:9,y:10},{x:8,y:10},{x:7,y:10}];prev=null;dir={x:1,y:0};q=[];score=0;run=false;over=false;scoreEl.textContent=0;sizeEl.textContent=3;place();g.rearm();draw()};
+ const reset=()=>{body=[{x:9,y:10},{x:8,y:10},{x:7,y:10}];prev=null;vis=null;dir={x:1,y:0};q=[];score=0;run=false;over=false;scoreEl.textContent=0;sizeEl.textContent=3;place();g.rearm();draw()};
  const tick=()=>{if(!run||over)return;if(q.length)dir=q.shift();prev=body.map(p=>({x:p.x,y:p.y}));const h={x:body[0].x+dir.x,y:body[0].y+dir.y};
   if(h.x<0||h.y<0||h.x>=n||h.y>=n||body.some(p=>p.x===h.x&&p.y===h.y)){over=true;run=false;g.msg.textContent="Fim de jogo! Clique em Reiniciar.";g.finish(score,"loss");return}
   body.unshift(h);if(h.x===food.x&&h.y===food.y){score+=10;scoreEl.textContent=score;place()}else body.pop();sizeEl.textContent=body.length;draw()};
- const turn=m=>{const ref=q.length?q[q.length-1]:dir;if(q.length>=3||(m[0]===ref.x&&m[1]===ref.y)||(m[0]===-ref.x&&m[1]===-ref.y))return;q.push({x:m[0],y:m[1]});const now=performance.now();if(now-last>STEP*.45){last=now;tick()}};
+ const turn=m=>{const ref=q.length?q[q.length-1]:dir;if(q.length>=3||(m[0]===ref.x&&m[1]===ref.y)||(m[0]===-ref.x&&m[1]===-ref.y))return;q.push({x:m[0],y:m[1]});const now=performance.now(),wait=MINGAP-(now-last);if(wait<=0){last=now;tick()}else setTimeout(()=>{if(run&&!over&&q.length){last=performance.now();tick()}},wait)};
  const start=()=>{if(over)reset();if(!run){run=true;last=performance.now();g.msg.textContent=""}};
  g.controls.append(button("▶ Iniciar",start),button("↻ Reiniciar",()=>{reset();run=true;last=performance.now();g.msg.textContent=""}));
  listen(document,"keydown",e=>{const k=e.key.length===1?e.key.toLowerCase():e.key,m={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]}[k];if(!m)return;e.preventDefault();if(run)turn(m)});
@@ -83,7 +94,7 @@ function snake(root,end){
 function tetris(root,end){
  const g=setup(root,"tetris",end),[sc,ln,lv]=g.hud([["PONTOS","0"],["LINHAS","0"],["NÍVEL","1"]]);
  const layout=$("div","tetris-layout");g.shell.append(layout);const wrap=$("div");layout.append(wrap);
- const c=$("canvas","game-canvas");c.width=300;c.height=600;c.style.width="min(65vw,300px)";wrap.append(c);const ctx=c.getContext("2d");
+ const c=$("canvas","game-canvas fit tetris-fit");c.width=300;c.height=600;c.style.setProperty("--w",300);c.style.setProperty("--h",600);wrap.append(c);const ctx=c.getContext("2d");
  const side=$("div","tetris-side");layout.append(side);side.append($("small","","PRÓXIMA"));const nc=$("canvas");nc.width=100;nc.height=100;side.append(nc);const nx=nc.getContext("2d");
  const C=10,R=20,S=30,colors=["","#38bdf8","#2563eb","#f59e0b","#facc15","#22c55e","#a855f7","#ef4444"],shapes=[null,[[1,1,1,1]],[[1,0,0],[1,1,1]],[[0,0,1],[1,1,1]],[[1,1],[1,1]],[[0,1,1],[1,1,0]],[[0,1,0],[1,1,1]],[[1,1,0],[0,1,1]]];
  let grid,cur,next,score=0,lines=0,level=1,run=false,pause=false,over=false,last=0,acc=0,raf;
