@@ -74,7 +74,7 @@ function arcade(cfg) {
     }
     function begin() {
       api.D = cfg.diffs ? cfg.diffs[api.diff] : {}; secs = 0; api.state = "run"; hideOv(); api.msg("");
-      G = cfg.create(api); G.start(); sync(); sfx(440, .08);
+      G = cfg.create(api); G.start(); window.ArcadeKit.last = G; /* usado nos testes automáticos */ sync(); sfx(440, .08);
     }
     function pause() {
       if (api.state !== "run") return;

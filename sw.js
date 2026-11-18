@@ -1,11 +1,11 @@
 /* Arcade Local — Service Worker (funcionamento offline).
    IMPORTANTE: aumente CACHE_VERSION a cada atualização de arquivos, senão o navegador
    continua servindo a versão antiga do cache. */
-const CACHE_VERSION = "arcade-local-v6-goleiro";
+const CACHE_VERSION = "arcade-local-v7-lote3";
 const ASSETS = [
   "./", "./index.html", "./manifest.webmanifest",
   "./css/style.css",
-  "./js/storage.js", "./js/physics.js", "./js/games.js", "./js/games2.js", "./js/games3.js", "./js/app.js", "./js/pwa.js",
+  "./js/storage.js", "./js/physics.js", "./js/games.js", "./js/games2.js", "./js/games3.js", "./js/games4.js", "./js/app.js", "./js/pwa.js",
   "./assets/icon.svg", "./assets/icon-192.png", "./assets/icon-512.png"
 ];
 

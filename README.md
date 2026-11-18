@@ -1,6 +1,6 @@
 # Arcade Local
 
-Portal arcade offline com 22 jogos (14 clássicos + 8 novos com física real), desenvolvido em HTML5, CSS3 e JavaScript puro.
+Portal arcade offline com 26 jogos (14 clássicos + 12 novos com física real), desenvolvido em HTML5, CSS3 e JavaScript puro.
 
 ## Como executar
 1. Extraia `Arcade_Local.zip` para uma pasta.
@@ -31,6 +31,13 @@ Todos seguem o mesmo padrão: tela inicial com instruções e dificuldade, **Com
 - **Air Hockey:** primeiro a 7 gols contra a CPU. Colisões elásticas disco × taco e disco × borda; a batida ganha a velocidade do seu taco.
 - **Corrida Infinita:** pule (segure para pular mais alto), deslize sob barras suspensas e colete orbes; a velocidade cresce com o tempo.
 
+## Novos jogos — Lote 3
+- **Boliche**: 10 quadros com strike/spare, pinos com colisão círculo×círculo (massas), canaletas, deslize para lançar e efeito pela curva do gesto.
+- **Mini Golf**: 9 buracos com paredes, areia, água, rampas, bumpers e moinhos giratórios (colisão com superfície em movimento).
+- **Pinball**: mesa inclinada com gravidade, flippers com velocidade angular, bumpers, estilingues, alvos, multiplicador e bola salva.
+- **Doodle Jump**: pulo com gravidade, plataformas móveis/quebráveis, molas, hélice, monstros e tiros.
+- Goleiros dos jogos de futebol com física real (salto, mergulho, queda e levantar). Espaço inicia/continua qualquer jogo. Telas maiores no PC.
+
 ## Funcionamento offline (Service Worker)
 - O Service Worker (`sw.js`) e o manifesto (`manifest.webmanifest`) só funcionam quando o portal é servido por **http(s) ou localhost** (ex.: Vercel, GitHub Pages, `npx serve`). Abrir `index.html` direto do disco (`file://`) continua funcionando, mas sem instalação/cache do navegador.
 - Instalação no Android: abra o endereço no Chrome > menu > "Instalar app".
@@ -51,6 +58,7 @@ Arcade_Local/
 ├── js/games.js       (14 jogos originais)
 ├── js/games2.js      (framework padrão + Lote 1)
 ├── js/games3.js      (Lote 2)
+├── js/games4.js      (Lote 3)
 ├── js/physics.js     (física da bola)
 ├── js/pwa.js         (registro do Service Worker)
 ├── js/storage.js

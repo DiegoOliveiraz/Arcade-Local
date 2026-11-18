@@ -52,7 +52,7 @@ function snake(root,end){
   const dtv=Math.min(64,Math.max(0,t-lastDraw));lastDraw=t;
   if(!vis||!prev)vis=body.map(p=>({x:p.x,y:p.y}));
   else{while(vis.length<body.length)vis.push({x:vis[vis.length-1].x,y:vis[vis.length-1].y});vis.length=body.length;
-   vis.forEach((v,i)=>{const dx=body[i].x-v.x,dy=body[i].y-v.y,d=Math.hypot(dx,dy);if(d<1e-4)return;if(d>2.5){v.x=body[i].x;v.y=body[i].y;return}const st=Math.min(d,(1+.9*Math.min(d,1.5))/STEP*dtv);v.x+=dx/d*st;v.y+=dy/d*st})}
+   vis.forEach((v,i)=>{const dx=body[i].x-v.x,dy=body[i].y-v.y,d=Math.hypot(dx,dy);if(d<1e-4)return;if(d>2.5){v.x=body[i].x;v.y=body[i].y;return}const st=Math.min(d,(i===0?2.2+3.5*Math.min(d,1.5):1+.9*Math.min(d,1.5))/STEP*dtv);v.x+=dx/d*st;v.y+=dy/d*st})}
   x.fillStyle="#0b1220";x.fillRect(0,0,400,400);for(let i=0;i<n;i++)for(let j=0;j<n;j++)if((i+j)%2===0){x.fillStyle="#ffffff08";x.fillRect(i*cell,j*cell,cell,cell)}
   // maçã: duas bochechas, brilho, cabinho e folha, "respirando"
   x.save();x.translate(food.x*cell+10,food.y*cell+11);const bob=1+Math.sin(t/260)*.07;x.scale(bob,bob);
@@ -88,7 +88,7 @@ function snake(root,end){
  const start=()=>{if(over)reset();if(!run){run=true;last=performance.now();g.msg.textContent=""}};
  g.controls.append(button("▶ Iniciar",start),button("↻ Reiniciar",()=>{reset();run=true;last=performance.now();g.msg.textContent=""}));
  listen(document,"keydown",e=>{const k=e.key.length===1?e.key.toLowerCase():e.key,m={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]}[k];if(!m)return;e.preventDefault();if(run)turn(m)});
- let sx,sy;listen(c,"pointerdown",e=>{sx=e.clientX;sy=e.clientY});listen(c,"pointerup",e=>{if(!run||sx===undefined)return;const a=e.clientX-sx,b=e.clientY-sy;if(Math.max(Math.abs(a),Math.abs(b))<20)return;turn(Math.abs(a)>Math.abs(b)?[a>0?1:-1,0]:[0,b>0?1:-1])});
+ let sx,sy;listen(c,"pointerdown",e=>{sx=e.clientX;sy=e.clientY});listen(c,"pointermove",e=>{if(!run||sx===undefined||!e.buttons&&e.pointerType==="mouse")return;const a=e.clientX-sx,b=e.clientY-sy;if(Math.max(Math.abs(a),Math.abs(b))<14)return;turn(Math.abs(a)>Math.abs(b)?[a>0?1:-1,0]:[0,b>0?1:-1]);sx=e.clientX;sy=e.clientY});listen(c,"pointerup",()=>{sx=undefined});listen(c,"pointercancel",()=>{sx=undefined});
  loop(t=>{if(run&&t-last>=STEP){last=t;tick()}draw(t)});reset();g.msg.textContent="Clique em Iniciar";
 }
 function tetris(root,end){
