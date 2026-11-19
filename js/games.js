@@ -180,14 +180,17 @@ function flappy(root,end){
  });
  reset();g.msg.textContent="Clique em Iniciar";
 }
+const tLines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+// valor da posição para quem vai jogar (pl): +1 vence, 0 empata, -1 perde (jogo perfeito dos dois lados)
+const tMinimax=(a,pl)=>{const w=tLines.find(l=>a[l[0]]&&a[l[0]]===a[l[1]]&&a[l[1]]===a[l[2]]);if(w)return a[w[0]]===pl?1:-1;const em=a.map((v,i)=>v?null:i).filter(v=>v!==null);if(!em.length)return 0;let best=-2;for(const j of em){const b2=a.slice();b2[j]=pl;best=Math.max(best,-tMinimax(b2,pl==="X"?"O":"X"))}return best};
 function tictactoe(root,end){
- const g=setup(root,"tictactoe",end),[he,ae,de]=g.hud([["VOCÊ (X)","0"],["IA (O)","0"],["EMPATES","0"]]);let board=Array(9).fill(""),human=0,ai=0,draws=0,playing=false;
+ const g=setup(root,"tictactoe",end),[he,ae,de]=g.hud([["VOCÊ (X)","0"],["IA (O)","0"],["EMPATES","0"]]);const pick=picker(g,{"Fácil":{bl:.55,smart:0},"Normal":{bl:.2,smart:1},"Difícil":{bl:.08,smart:2}},"Normal");let board=Array(9).fill(""),human=0,ai=0,draws=0,playing=false;
  const b=$("div","game-board");b.style.gridTemplateColumns="repeat(3,minmax(75px,110px))";b.style.gridTemplateRows="repeat(3,minmax(75px,110px))";g.shell.append(b);
  const check=a=>{for(const l of [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]])if(a[l[0]]&&a[l[0]]===a[l[1]]&&a[l[1]]===a[l[2]])return a[l[0]];return a.every(Boolean)?"draw":null};
  const render=()=>{b.innerHTML="";board.forEach((v,i)=>{const c=button(v||"·",()=>play(i));c.style.fontSize="38px";c.style.aspectRatio="1";c.style.color=v==="X"?"#22d3ee":"#c4b5fd";b.append(c)})};
  const status=()=>{he.textContent=human;ae.textContent=ai;de.textContent=draws};
  const over=r=>{playing=false;if(r==="X"){human++;g.msg.textContent="Você venceu! Clique em Iniciar para outra rodada.";g.finish(100,"win")}else if(r==="O"){ai++;g.msg.textContent="A IA venceu. Clique em Iniciar para outra rodada.";g.finish(0,"loss")}else{draws++;g.msg.textContent="Empate. Clique em Iniciar para outra rodada.";g.finish(30,"draw")}status()};
- const play=i=>{if(!playing||board[i])return;board[i]="X";let r=check(board);if(r){render();over(r);return}const empty=board.map((v,j)=>v?null:j).filter(v=>v!==null);let move=empty.find(j=>{let a=board.slice();a[j]="O";return check(a)==="O"});if(move===undefined)move=empty.find(j=>{let a=board.slice();a[j]="X";return check(a)==="X"});if(move===undefined&&board[4]==="")move=4;if(move===undefined)move=empty[Math.floor(Math.random()*empty.length)];board[move]="O";r=check(board);render();if(r)over(r)};
+ const play=i=>{if(!playing||board[i])return;board[i]="X";let r=check(board);if(r){render();over(r);return}const empty=board.map((v,j)=>v?null:j).filter(v=>v!==null);const cf=pick();let move;if(Math.random()<cf.bl)move=empty[Math.floor(Math.random()*empty.length)];else if(cf.smart===2){let bs=-2;for(const j of empty.slice().sort(()=>Math.random()-.5)){const a=board.slice();a[j]="O";const v=-tMinimax(a,"X");if(v>bs){bs=v;move=j}}}else{move=empty.find(j=>{let a=board.slice();a[j]="O";return check(a)==="O"});if(move===undefined)move=empty.find(j=>{let a=board.slice();a[j]="X";return check(a)==="X"});if(move===undefined&&board[4]==="")move=4;if(move===undefined)move=empty[Math.floor(Math.random()*empty.length)]}board[move]="O";r=check(board);render();if(r)over(r)};
  const round=()=>{board=Array(9).fill("");playing=true;g.rearm();g.msg.textContent="Sua vez.";render()};
  g.controls.append(button("▶ Iniciar",()=>{if(!playing)round()}),button("↻ Reiniciar",round),button("Zerar placar",()=>{human=ai=draws=0;status()}));
  render();g.msg.textContent="Clique em Iniciar";
@@ -334,7 +337,7 @@ function sudoku(root,end){
  let found;const solve=(b,lim,rand)=>{let best=-1,opts=null;for(let i=0;i<81;i++)if(!b[i]){const o=[];for(let v=1;v<=9;v++)if(ok(b,i,v))o.push(v);if(!o.length)return 0;if(!opts||o.length<opts.length){best=i;opts=o;if(o.length===1)break}}
   if(best<0){found=b.slice();return 1}if(rand)opts.sort(()=>Math.random()-.5);let n=0;for(const v of opts){b[best]=v;n+=solve(b,lim-n,rand);if(n>=lim){b[best]=0;return n}}b[best]=0;return n};
  const make=clues=>{solve(Array(81).fill(0),1,true);const sol=found,pz=sol.slice(),idx=[...Array(81).keys()].sort(()=>Math.random()-.5);let rm=0;for(const i of idx){if(rm>=81-clues)break;const v=pz[i];pz[i]=0;if(solve(pz.slice(),2,false)===1)rm++;else pz[i]=v}return [sol,pz]};
- const levels={"Fácil":40,"Médio":32,"Difícil":26};let sol=Array(81).fill(0),cells=Array(81).fill(0),given=Array(81).fill(false),sel=-1,errors=0,sec=0,playing=false;
+ const levels={"Fácil":42,"Normal":34,"Difícil":29};let sol=Array(81).fill(0),cells=Array(81).fill(0),given=Array(81).fill(false),sel=-1,errors=0,sec=0,playing=false;
  const grid=$("div","sd-grid");g.shell.insertBefore(grid,g.msg);const pad=$("div","keys");g.shell.insertBefore(pad,g.msg);
  const render=()=>{grid.innerHTML="";const sv=sel>=0?cells[sel]:0;cells.forEach((v,i)=>{const r=i/9|0,c=i%9;let k="sd-cell"+(c%3===2&&c<8?" c3":"")+(r%3===2&&r<8?" r3":"")+(given[i]?" given":"");
    if(sel>=0){const sr=sel/9|0,sc=sel%9;if(i===sel)k+=" sel";else if(r===sr||c===sc||(r/3|0)===(sr/3|0)&&(c/3|0)===(sc/3|0))k+=" rel";if(sv&&v===sv&&i!==sel)k+=" same"}
@@ -346,7 +349,7 @@ function sudoku(root,end){
  const begin=()=>{[sol,cells]=make(pick());cells=cells.slice();given=cells.map(Boolean);sel=-1;errors=0;sec=0;tm.textContent="0:00";playing=true;g.rearm();g.msg.textContent="";render()};
  every(()=>{if(playing){sec++;tm.textContent=(sec/60|0)+":"+String(sec%60).padStart(2,"0")}},1000);
  g.controls.append(button("▶ Iniciar",()=>{if(!playing)begin()}),button("↻ Reiniciar",begin));
- const pick=picker(g,levels,"Médio");
+ const pick=picker(g,levels,"Normal");
  listen(document,"keydown",e=>{if(/^[1-9]$/.test(e.key))put(+e.key);else if(e.key==="Backspace"||e.key==="Delete"||e.key==="0")put(0);else if(sel>=0&&e.key.startsWith("Arrow")){e.preventDefault();const d={ArrowLeft:-1,ArrowRight:1,ArrowUp:-9,ArrowDown:9}[e.key];const n=sel+d;if(n>=0&&n<81&&!(d===-1&&sel%9===0)&&!(d===1&&sel%9===8)){sel=n;render()}}});
  render();g.msg.textContent="Clique em Iniciar";
 }
@@ -384,10 +387,12 @@ const chSearch=(s,d,al,be)=>{const ms=chLegal(s);if(!ms.length)return chInCheck(
  ms.sort((x,y)=>(s.b[y.t]!=="."?1:0)-(s.b[x.t]!=="."?1:0));
  if(s.t==="w"){let best=-Infinity;for(const m of ms){best=Math.max(best,chSearch(chPlay(s,m),d-1,al,be));al=Math.max(al,best);if(al>=be)break}return best}
  let best=Infinity;for(const m of ms){best=Math.min(best,chSearch(chPlay(s,m),d-1,al,be));be=Math.min(be,best);if(al>=be)break}return best};
-const chAI=(s,d,noise)=>{const ms=chLegal(s).sort(()=>Math.random()-.5);let best=null,bs=Infinity;for(const m of ms){const v=chSearch(chPlay(s,m),d-1,-Infinity,Infinity)+Math.random()*noise;if(v<bs){bs=v;best=m}}return best};
+// Níveis calibrados contra jogadores simulados (iniciante, casual, cuidadoso): Fácil erra bastante, Normal erra de vez em quando e só olha a própria jogada, Difícil olha a resposta do adversário na maior parte das jogadas.
+const CHL={1:{d:1,d2:2,p2:.2,noise:100,bl:.65},2:{d:1,noise:50,bl:.3},3:{d:1,d2:2,p2:.6,noise:30,bl:.1}};
+const chAI=(s,lv)=>{const cf=CHL[lv]||CHL[2],ms=chLegal(s).sort(()=>Math.random()-.5);if(!ms.length)return null;if(Math.random()<cf.bl)return ms[0];const d=(cf.d2&&Math.random()<cf.p2)?cf.d2:cf.d;let best=ms[0],bs=Infinity;for(const m of ms){const v=chSearch(chPlay(s,m),d-1,-Infinity,Infinity)+(Math.random()-.5)*2*cf.noise;if(v<bs){bs=v;best=m}}return best};
 function chess(root,end){
  const g=setup(root,"chess",end),[tu,cp,mh]=g.hud([["TURNO","Brancas"],["CAPTURAS","0"],["JOGADAS","0"]]);
- const pick=picker(g,{"Fácil":1,"Médio":2,"Difícil":3},"Médio"),SZ="min(10.8vw,58px)";
+ const pick=picker(g,{"Fácil":1,"Normal":2,"Difícil":3},"Normal"),SZ="min(10.8vw,58px)";
  const board=$("div","game-board");board.style.gridTemplateColumns=`repeat(8,${SZ})`;board.style.gap="0";board.style.borderRadius="10px";board.style.overflow="hidden";g.shell.insertBefore(board,g.msg);
  const init=()=>({b:[..."rnbqkbnr"+"pppppppp"+".".repeat(32)+"PPPPPPPP"+"RNBQKBNR"],t:"w",cr:{K:1,Q:1,k:1,q:1},ep:-1});
  let s=init(),sel=-1,tg=[],lm=null,playing=false,busy=false,caps=0,cnt=0;
@@ -399,7 +404,7 @@ function chess(root,end){
  const after=()=>{const ms=chLegal(s),ck=chInCheck(s);tu.textContent=s.t==="w"?"Você (brancas)":"IA (pretas)";
   if(!ms.length){playing=false;busy=false;if(ck){const win=s.t==="b";g.msg.textContent=win?"Xeque-mate! Você venceu!":"Xeque-mate. A IA venceu.";g.finish(win?pick()*400+Math.max(0,200-cnt*4):0,win?"win":"loss")}else{g.msg.textContent="Empate por afogamento.";g.finish(100,"draw")}render();return}
   g.msg.textContent=ck?"Xeque!":"";render();if(s.t==="b"){busy=true;tu.textContent="IA pensando…";setTimeout(ai,40)}};
- const ai=()=>{if(!playing||s.t!=="b")return;const d=pick(),m=chAI(s,d,[0,160,20,0][d]);busy=false;if(!m)return;s=chPlay(s,m);lm=m;after()};
+ const ai=()=>{if(!playing||s.t!=="b")return;const m=chAI(s,pick());busy=false;if(!m)return;s=chPlay(s,m);lm=m;after()};
  const doMove=m=>{if(s.b[m.t]!=="."||m.ep){caps++;cp.textContent=caps}cnt++;mh.textContent=cnt;s=chPlay(s,m);lm=m;sel=-1;tg=[];after()};
  const click=i=>{if(!playing||busy||s.t!=="w")return;const m=tg.find(q=>q.t===i);if(m){doMove(m);return}const p=s.b[i];if(p!=="."&&chW(p)){sel=i;tg=chLegal(s).filter(q=>q.f===i)}else{sel=-1;tg=[]}render()};
  const begin=()=>{s=init();sel=-1;tg=[];lm=null;caps=cnt=0;cp.textContent=0;mh.textContent=0;tu.textContent="Você (brancas)";playing=true;busy=false;g.rearm();g.msg.textContent="Você joga com as brancas.";render()};
@@ -423,7 +428,7 @@ const ckSearch=(b,side,d,al,be)=>{const ms=ckMoves(b,side);if(!ms.length)return 
  let best=Infinity;for(const m of ms){best=Math.min(best,ckSearch(ckPlay(b,m),1,d-1,al,be));be=Math.min(be,best);if(al>=be)break}return best};
 function checkers(root,end){
  const g=setup(root,"checkers",end),[tu,mp,ap]=g.hud([["TURNO","Você"],["SUAS PEÇAS","12"],["PEÇAS DA IA","12"]]);
- const pick=picker(g,{"Fácil":2,"Médio":4,"Difícil":6},"Médio"),SZ="min(10.8vw,58px)";
+ const pick=picker(g,{"Fácil":2,"Normal":4,"Difícil":6},"Normal"),SZ="min(10.8vw,58px)";
  const board=$("div","game-board");board.style.gridTemplateColumns=`repeat(8,${SZ})`;board.style.gap="0";board.style.borderRadius="10px";board.style.overflow="hidden";g.shell.insertBefore(board,g.msg);
  const init=()=>{const b=Array(64).fill(0);for(let i=0;i<64;i++){const r=i>>3,c=i&7;if((r+c)%2){if(r<3)b[i]=-1;else if(r>4)b[i]=1}}return b};
  let b=init(),turn=1,sel=-1,tg=[],lm=null,playing=false,busy=false;
@@ -437,7 +442,8 @@ function checkers(root,end){
   else if(turn===-1){busy=true;tu.textContent="IA pensando…";setTimeout(ai,350)}
   render()};
  const apply=m=>{b=ckPlay(b,m);lm=m;sel=-1;tg=[];turn=-turn;after()};
- const ai=()=>{if(!playing||turn!==-1)return;const d=pick(),ms=ckMoves(b,-1).sort(()=>Math.random()-.5);let best=ms[0],bs=Infinity;for(const m of ms){const v=ckSearch(ckPlay(b,m),1,d-1,-Infinity,Infinity)+(d<3?Math.random()*60:0);if(v<bs){bs=v;best=m}}busy=false;if(best)apply(best)};
+ const CKL={2:{d:1,d2:2,p2:.2,noise:70,bl:.65},4:{d:2,noise:30,bl:.3},6:{d:2,d2:3,p2:.15,noise:25,bl:.17}};
+ const ai=()=>{if(!playing||turn!==-1)return;const cf=CKL[pick()]||CKL[4],ms=ckMoves(b,-1).sort(()=>Math.random()-.5);let best=ms[0],bs=Infinity;if(Math.random()>=cf.bl){const d=(cf.d2&&Math.random()<cf.p2)?cf.d2:cf.d;for(const m of ms){const v=ckSearch(ckPlay(b,m),1,d-1,-Infinity,Infinity)+(Math.random()-.5)*2*cf.noise;if(v<bs){bs=v;best=m}}}busy=false;if(best)apply(best)};
  const click=i=>{if(!playing||busy||turn!==1)return;const m=tg.find(q=>q.path[q.path.length-1]===i);if(m){apply(m);return}if(b[i]>0){const ms=ckMoves(b,1).filter(q=>q.f===i);sel=ms.length?i:-1;tg=ms}else{sel=-1;tg=[]}render()};
  const begin=()=>{b=init();turn=1;sel=-1;tg=[];lm=null;playing=true;busy=false;count();tu.textContent="Você";g.rearm();g.msg.textContent="Você joga com as brancas. Capturar é obrigatório.";render()};
  g.controls.append(button("▶ Iniciar",()=>{if(!playing)begin()}),button("↻ Reiniciar",begin));count();render();g.msg.textContent="Clique em Iniciar";

@@ -1,7 +1,7 @@
 /* Arcade Local — Service Worker (funcionamento offline).
    IMPORTANTE: aumente CACHE_VERSION a cada atualização de arquivos, senão o navegador
    continua servindo a versão antiga do cache. */
-const CACHE_VERSION = "arcade-local-v7-lote3";
+const CACHE_VERSION = "arcade-local-v8-dificuldade";
 const ASSETS = [
   "./", "./index.html", "./manifest.webmanifest",
   "./css/style.css",
